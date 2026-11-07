@@ -89,25 +89,32 @@ def Todo.digit(keep: Bool, +c: U32, rest: String) -> String:
     case False{}:
       ""
 
-# the leading digits of s
-def Todo.digits(s: String) -> String:
-  match s:
-    case SNil{}:
-      SNil{}
-    case SCon{Chr{+c}, t}:
-      Todo.digit(Bool.and(U32.is_ge(c, 48), U32.is_le(c, 57)), c, Todo.digits(t))
+# Carry both the prefix and the verdict: a recursive argument to Todo.digit
+# is evaluated even when the current character is not a digit. That walked
+# entire tool results and overflowed the hub's JavaScript stack.
+def Todo.digits.go(s: String, acc: String, keep: Bool) -> String:
+  match s keep:
+    case SCon{Chr{+c}, t} True{}:
+      +digit = Bool.and(U32.is_ge(c, 48), U32.is_le(c, 57))
+      Todo.digits.go(t, acc ++ Todo.digit(digit, c, ""), digit)
+    case _ _:
+      acc
 
-def Todo.result.k(ps: List<&2, String>) -> String:
-  match ps:
-    case _ <> rest <> _:
-      Todo.digits(rest)
-    case _:
+# the leading digits of s, without a stack frame per character
+def Todo.digits(s: String) -> String:
+  Todo.digits.go(s, "", True{})
+
+def Todo.result.k(task: Bool, text: String) -> String:
+  match task:
+    case True{}:
+      Todo.digits(String.drop(text, 6n))
+    case False{}:
       ""
 
 # the number in a TaskCreate result ("Task #3 created successfully: ..."),
 # or "" for anything else
 def Todo.result(+text: String) -> String:
-  Bool.pick(String, String.starts_with(text, "Task #"), Todo.result.k(String.split(text, '#')), "")
+  Todo.result.k(String.starts_with(text, "Task #"), text)
 
 # Codex's todo_list item: {items: [{text, completed}]}; Grok's plan comes
 # the same way with a status instead
